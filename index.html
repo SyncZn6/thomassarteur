@@ -255,9 +255,11 @@ body.ready .hero .meta,body.ready .hero .down{opacity:1}
   .hero .meta{bottom:58px;font-size:11px}.hero .meta.r{bottom:98px}.hero .down{display:none}
   .sec{padding-top:90px}
   .sh{grid-template-columns:44px 1fr}.sh .side,.sh .filters{grid-column:1/-1;text-align:left;justify-content:flex-start;max-width:none}
-  .ix{grid-template-columns:1fr;gap:0}.ix .row{grid-template-columns:34px minmax(0,1fr) 34px}
-  .stage{position:fixed;top:auto;margin-top:0;right:12px;bottom:12px;width:36vw;height:auto;aspect-ratio:4/5;padding:0;z-index:20;opacity:0;transform:translateY(12px);transition:opacity .4s,transform .5s var(--out);pointer-events:none;background:#fff}
-  .stage.vis{opacity:1;transform:none;pointer-events:auto}.stage .scap{display:none}.sf .cross{display:none}.sf{outline:1px solid #000}
+  /* mobile : la visionneuse reste collée sous la barre, le projet qui passe sous elle s'active au scroll */
+  .ix{display:flex;flex-direction:column;gap:0}.ix .row{grid-template-columns:34px minmax(0,1fr) 34px}
+  .stage::before{content:'';position:absolute;left:0;right:0;bottom:100%;height:var(--bar);background:#fff}
+  .stage{position:sticky;top:var(--bar);order:-1;height:36vh;align-self:stretch;width:auto;box-sizing:content-box;padding:10px 0 12px;margin:0 -16px;padding-left:16px;padding-right:16px;z-index:6;background:#fff;gap:10px;border-bottom:1px solid #000}
+  .sf .cross{display:none}.scap{margin:0;padding:0;border-top:0}.scap .l2{display:none}
   .row{grid-template-columns:34px minmax(0,1fr) 34px;padding:24px 12px;margin:0 -12px;gap:12px;align-items:start}.row .c,.row .y{display:none}.row .ar{width:34px;height:34px;font-size:14px}.row .d{font-size:11px;margin-top:8px}
   #preview{display:none}
   .disc{height:240vh}.disc .stick{grid-template-columns:1fr;grid-template-rows:auto 1fr;padding-top:90px}
@@ -477,15 +479,18 @@ function stageGo() { const t = MEDIA[sPi][sK]; clearTimeout(sNext);
 function stageShow(pi) { if (pi === sPi) return; sPi = pi; sK = 0; const p = P[pi];
   stage.href = '#/' + p.slug; stageGo();
   $('sNo').textContent = `[${pad(pi + 1)}]`; $('sYr').textContent = `${p.cat} · ${p.year}`; scramble($('sTi'), p.title, 420); }
-function scrollRow() { if (hovRow) return; const cy = innerHeight * .55; let f = null;
-  for (const a of rows) { if (a.parentNode.classList.contains('off')) continue; const r = a.getBoundingClientRect(); if (r.top <= cy && r.bottom > cy) { f = a; break; } }
+const mob = matchMedia('(max-width:900px)');
+function scrollRow() { if (hovRow) return; let cy = innerHeight * .55; let f = null;
+  if (mob.matches) { const sb = stage.getBoundingClientRect().bottom; cy = sb + (innerHeight - sb) * .5; }
+  for (const a of rows) { if (a.parentNode.classList.contains('off')) continue; const r = a.getBoundingClientRect(); if (r.top <= cy && r.bottom > cy) { f = a; break; }
+    if (mob.matches && Math.min(Math.abs(r.top - cy), Math.abs(r.bottom - cy)) < 40) f = f || a; }
   setRow(f); }
 addEventListener('scroll', scrollRow, {passive: true}); addEventListener('resize', scrollRow);
 rows.forEach(a => {
   const pi = +a.dataset.pi;
-  a.addEventListener('mouseenter', e => { hovRow = a; setRow(a, e);
+  a.addEventListener('mouseenter', e => { if (!fine) return; hovRow = a; setRow(a, e);
     if (fine) { pvIn.innerHTML = thumbHTML(P[pi].thumb, true); const v = pvIn.querySelector('video'); if (v) v.play().catch(() => {}); pv.classList.add('on'); pvOn = true; } });
-  a.addEventListener('mouseleave', e => { if (hovRow === a) hovRow = null; pv.classList.remove('on'); pvOn = false;
+  a.addEventListener('mouseleave', e => { if (!fine) return; if (hovRow === a) hovRow = null; pv.classList.remove('on'); pvOn = false;
     requestAnimationFrame(() => { if (!hovRow) { setRow(null, e); scrollRow(); } }); });
 });
 addEventListener('pointermove', e => { tx = e.clientX; ty = e.clientY; }, {passive: true});
